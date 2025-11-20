@@ -5,16 +5,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.eventos.dto.EventoDTO;
 import pe.edu.upeu.eventos.dto.request.CrearEventoRequest;
+import pe.edu.upeu.eventos.entity.CarreraEntity;
 import pe.edu.upeu.eventos.entity.EventoEntity;
+import pe.edu.upeu.eventos.entity.FacultadEntity;
 import pe.edu.upeu.eventos.entity.FechaEventoEntity;
 import pe.edu.upeu.eventos.entity.UsuarioEntity;
 import pe.edu.upeu.eventos.mapper.EventoMapper;
+import pe.edu.upeu.eventos.repository.CarreraRepository;
 import pe.edu.upeu.eventos.repository.EventoRepository;
+import pe.edu.upeu.eventos.repository.FacultadRepository;
 import pe.edu.upeu.eventos.repository.UsuarioRepository;
 import pe.edu.upeu.eventos.service.EventoService;
 import pe.edu.upeu.eventos.security.model.UserDetailsImpl;
-import pe.edu.upeu.eventos.utils.Carreras;
-import pe.edu.upeu.eventos.utils.Facultades;
 import org.springframework.security.core.Authentication;
 
 import java.time.LocalDateTime;
@@ -34,6 +36,12 @@ public class EventoServiceImpl implements EventoService {
     private UsuarioRepository usuarioRepository;
 
     @Autowired
+    private CarreraRepository carreraRepository;
+
+    @Autowired
+    private FacultadRepository facultadRepository;
+
+    @Autowired
     private EventoMapper eventoMapper;
 
     @Override
@@ -41,28 +49,32 @@ public class EventoServiceImpl implements EventoService {
         UsuarioEntity creador = usuarioRepository.findById(creadorId)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // Validar carrera si se proporciona
-        if (request.getCarrera() != null && !request.getCarrera().isBlank()) {
-            if (!Carreras.isValid(request.getCarrera())) {
-                throw new RuntimeException("La carrera proporcionada para el evento no es válida. Use una de las opciones del catálogo o 'TODAS'.");
+        CarreraEntity carrera = null;
+        FacultadEntity facultad = null;
+        Boolean paraTodas = request.getParaTodas() != null ? request.getParaTodas() : false;
+
+        // Validar y buscar carrera si se proporcionó
+        if (request.getCarreraId() != null) {
+            carrera = carreraRepository.findById(request.getCarreraId())
+                    .orElseThrow(() -> new RuntimeException("Carrera no encontrada con ID: " + request.getCarreraId()));
+            if (!carrera.getActivo()) {
+                throw new RuntimeException("La carrera seleccionada no está activa");
             }
         }
 
-        // Validar facultad si se proporciona
-        if (request.getFacultad() != null && !request.getFacultad().isBlank()) {
-            if (!Facultades.isFaculty(request.getFacultad())) {
-                throw new RuntimeException("La facultad proporcionada para el evento no es válida. Use una de las opciones del catálogo o 'TODAS'.");
+        // Validar y buscar facultad si se proporcionó
+        if (request.getFacultadId() != null) {
+            facultad = facultadRepository.findById(request.getFacultadId())
+                    .orElseThrow(() -> new RuntimeException("Facultad no encontrada con ID: " + request.getFacultadId()));
+            if (!facultad.getActivo()) {
+                throw new RuntimeException("La facultad seleccionada no está activa");
             }
         }
 
-        // Si se proporcionan ambas, verificar consistencia: carrera debe pertenecer a la facultad
-        if (request.getCarrera() != null && request.getFacultad() != null && !request.getCarrera().isBlank() && !request.getFacultad().isBlank()) {
-            if (!"TODAS".equalsIgnoreCase(request.getFacultad())) {
-                List<String> carrerasDeFac = Facultades.careersForFaculty(request.getFacultad());
-                boolean ok = carrerasDeFac.stream().anyMatch(c -> c.equalsIgnoreCase(request.getCarrera()));
-                if (!ok) {
-                    throw new RuntimeException("La carrera no pertenece a la facultad indicada.");
-                }
+        // Verificar consistencia: si se proporcionan ambas, la carrera debe pertenecer a la facultad
+        if (carrera != null && facultad != null) {
+            if (!carrera.getFacultad().getId().equals(facultad.getId())) {
+                throw new RuntimeException("La carrera seleccionada no pertenece a la facultad indicada");
             }
         }
 
@@ -80,8 +92,9 @@ public class EventoServiceImpl implements EventoService {
                 .requiereComprobante(request.getRequiereComprobante())
                 .creador(creador)
                 .inscripciones(new HashSet<>())
-                .carrera(request.getCarrera())
-                .facultad(request.getFacultad())
+                .carrera(carrera)
+                .facultad(facultad)
+                .paraTodas(paraTodas)
                 .build();
 
         Set<FechaEventoEntity> fechas = new HashSet<>();
@@ -211,11 +224,24 @@ public class EventoServiceImpl implements EventoService {
         if (eventoDTO.getMetodosPago() != null) {
             evento.setMetodosPago(eventoDTO.getMetodosPago());
         }
-        if (eventoDTO.getCarrera() != null) {
-            evento.setCarrera(eventoDTO.getCarrera());
+        if (eventoDTO.getCarreraId() != null) {
+            CarreraEntity carrera = carreraRepository.findById(eventoDTO.getCarreraId())
+                    .orElseThrow(() -> new RuntimeException("Carrera no encontrada con ID: " + eventoDTO.getCarreraId()));
+            if (!carrera.getActivo()) {
+                throw new RuntimeException("La carrera seleccionada no está activa");
+            }
+            evento.setCarrera(carrera);
         }
-        if (eventoDTO.getFacultad() != null) {
-            evento.setFacultad(eventoDTO.getFacultad());
+        if (eventoDTO.getFacultadId() != null) {
+            FacultadEntity facultad = facultadRepository.findById(eventoDTO.getFacultadId())
+                    .orElseThrow(() -> new RuntimeException("Facultad no encontrada con ID: " + eventoDTO.getFacultadId()));
+            if (!facultad.getActivo()) {
+                throw new RuntimeException("La facultad seleccionada no está activa");
+            }
+            evento.setFacultad(facultad);
+        }
+        if (eventoDTO.getParaTodas() != null) {
+            evento.setParaTodas(eventoDTO.getParaTodas());
         }
 
         EventoEntity eventoActualizado = eventoRepository.save(evento);
@@ -272,19 +298,19 @@ public class EventoServiceImpl implements EventoService {
     public List<EventoDTO> obtenerEventosPublicos(Authentication authentication) {
         List<EventoEntity> activos = eventoRepository.findByActivoTrue();
 
-        // Si no hay autenticación, mostrar solo eventos para TODAS (carrera o facultad)
+        // Si no hay autenticación, mostrar solo eventos para TODAS
         if (authentication == null || !authentication.isAuthenticated()) {
             List<EventoEntity> filtrados = activos.stream()
-                    .filter(e -> "TODAS".equalsIgnoreCase(e.getCarrera()) || "TODAS".equalsIgnoreCase(e.getFacultad()))
+                    .filter(e -> e.getParaTodas() != null && e.getParaTodas())
                     .collect(Collectors.toList());
             return eventoMapper.eventoEntitiesToEventoDTOs(filtrados);
         }
 
         Object principal = authentication.getPrincipal();
         if (!(principal instanceof UserDetailsImpl)) {
-            // Si no es nuestro UserDetails, mostrar solo TODAS
+            // Si no es nuestro UserDetails, mostrar solo para TODAS
             List<EventoEntity> filtrados = activos.stream()
-                    .filter(e -> "TODAS".equalsIgnoreCase(e.getCarrera()) || "TODAS".equalsIgnoreCase(e.getFacultad()))
+                    .filter(e -> e.getParaTodas() != null && e.getParaTodas())
                     .collect(Collectors.toList());
             return eventoMapper.eventoEntitiesToEventoDTOs(filtrados);
         }
@@ -295,20 +321,19 @@ public class EventoServiceImpl implements EventoService {
             return eventoMapper.eventoEntitiesToEventoDTOs(activos);
         }
 
-        String carreraUsuario = user.getCarrera();
-        String facultadUsuario = Facultades.facultyForCareer(carreraUsuario).orElse(null);
+        Long carreraUsuarioId = user.getCarreraId();
+        Long facultadUsuarioId = user.getFacultadId();
 
         List<EventoEntity> filtrados = activos.stream()
                 .filter(e -> {
-                    // visible si evento es para todas las carreras o todas las facultades
-                    if (e.getCarrera() != null && "TODAS".equalsIgnoreCase(e.getCarrera())) return true;
-                    if (e.getFacultad() != null && "TODAS".equalsIgnoreCase(e.getFacultad())) return true;
+                    // visible si evento es para todas
+                    if (e.getParaTodas() != null && e.getParaTodas()) return true;
 
                     // visible si coincide la carrera
-                    if (e.getCarrera() != null && carreraUsuario != null && e.getCarrera().equalsIgnoreCase(carreraUsuario)) return true;
+                    if (e.getCarrera() != null && carreraUsuarioId != null && e.getCarrera().getId().equals(carreraUsuarioId)) return true;
 
                     // visible si coincide la facultad
-                    if (e.getFacultad() != null && facultadUsuario != null && e.getFacultad().equalsIgnoreCase(facultadUsuario)) return true;
+                    if (e.getFacultad() != null && facultadUsuarioId != null && e.getFacultad().getId().equals(facultadUsuarioId)) return true;
 
                     return false;
                 })

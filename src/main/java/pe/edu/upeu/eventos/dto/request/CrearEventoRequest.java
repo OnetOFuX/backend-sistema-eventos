@@ -50,11 +50,11 @@ public class CrearEventoRequest {
     @NotNull(message = "Debe proporcionar al menos una fecha para el evento")
     private List<FechaEventoRequest> fechas;
 
-    @Size(max = 100, message = "La carrera no puede exceder 100 caracteres")
-    private String carrera; // Nombre de la carrera o 'TODAS'
+    private Long carreraId; // ID de la carrera objetivo (opcional)
 
-    @Size(max = 100, message = "La facultad no puede exceder 100 caracteres")
-    private String facultad; // Nombre de la facultad o 'TODAS'
+    private Long facultadId; // ID de la facultad objetivo (opcional)
+
+    private Boolean paraTodas; // TRUE = evento visible para todos (opcional, default false)
 
     @Data
     @NoArgsConstructor

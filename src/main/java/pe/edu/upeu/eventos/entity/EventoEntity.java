@@ -61,11 +61,16 @@ public class EventoEntity {
     @Column(name = "requiere_comprobante")
     private Boolean requiereComprobante = false;
 
-    @Column(length = 100)
-    private String carrera; // Valores: nombre de la carrera o "TODAS" para visible a todas las carreras
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "carrera_id")
+    private CarreraEntity carrera; // Si es null, significa que no está restringido por carrera
 
-    @Column(length = 100)
-    private String facultad; // Nombre de la facultad objetivo o "TODAS"
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "facultad_id")
+    private FacultadEntity facultad; // Si es null, significa que no está restringido por facultad
+
+    @Column(name = "para_todas")
+    private Boolean paraTodas = false; // TRUE = visible para todos sin restricción
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "creador_id", nullable = false)

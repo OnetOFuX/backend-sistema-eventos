@@ -39,8 +39,7 @@ public class RegistroUsuarioRequest {
     @Size(max = 15, message = "El teléfono no puede exceder 15 caracteres")
     private String telefono;
 
-    @Size(max = 100, message = "La carrera no puede exceder 100 caracteres")
-    private String carrera;
+    private Long carreraId; // ID de la carrera del estudiante
 
     @Size(max = 50, message = "El ciclo no puede exceder 50 caracteres")
     private String ciclo;

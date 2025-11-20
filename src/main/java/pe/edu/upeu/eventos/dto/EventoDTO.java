@@ -37,6 +37,9 @@ public class EventoDTO {
     private Integer cuposDisponibles;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private String carrera; // carrera objetivo del evento o 'TODAS'
-    private String facultad; // facultad objetivo del evento o 'TODAS'
+    private Long carreraId;
+    private String carreraNombre;
+    private Long facultadId;
+    private String facultadNombre;
+    private Boolean paraTodas; // true = visible para todos
 }

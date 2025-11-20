@@ -24,7 +24,8 @@ public class UserDetailsImpl implements UserDetails {
     private String password;
     private UsuarioEntity.RolEnum rol;
     private Boolean activo;
-    private String carrera;
+    private Long carreraId;
+    private Long facultadId;
 
     public static UserDetailsImpl build(UsuarioEntity usuario) {
         return UserDetailsImpl.builder()
@@ -34,7 +35,8 @@ public class UserDetailsImpl implements UserDetails {
                 .password(usuario.getPassword())
                 .rol(usuario.getRol())
                 .activo(usuario.getActivo())
-                .carrera(usuario.getCarrera())
+                .carreraId(usuario.getCarrera() != null ? usuario.getCarrera().getId() : null)
+                .facultadId(usuario.getCarrera() != null && usuario.getCarrera().getFacultad() != null ? usuario.getCarrera().getFacultad().getId() : null)
                 .build();
     }
 

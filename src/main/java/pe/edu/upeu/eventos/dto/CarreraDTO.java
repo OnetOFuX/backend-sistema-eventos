@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import pe.edu.upeu.eventos.entity.UsuarioEntity;
 
 import java.time.LocalDateTime;
 
@@ -12,20 +11,15 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UsuarioDTO {
-
+public class CarreraDTO {
     private Long id;
-    private String codigo;
-    private String email;
     private String nombre;
-    private String apellido;
-    private String telefono;
-    private Long carreraId;
-    private String carreraNombre;
-    private String ciclo;
-    private UsuarioEntity.RolEnum rol;
+    private String codigo;
+    private String descripcion;
     private Boolean activo;
-    private String fotoUrl;
+    private Long facultadId;
+    private String facultadNombre;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
+

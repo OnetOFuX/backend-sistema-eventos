@@ -42,8 +42,9 @@ public class UsuarioEntity {
     @Column(length = 15)
     private String telefono;
 
-    @Column(length = 100)
-    private String carrera;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "carrera_id")
+    private CarreraEntity carrera;
 
     @Column(length = 50)
     private String ciclo;

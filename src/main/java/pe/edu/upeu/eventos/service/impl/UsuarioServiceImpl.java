@@ -6,8 +6,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.eventos.dto.UsuarioDTO;
 import pe.edu.upeu.eventos.dto.request.RegistroUsuarioRequest;
+import pe.edu.upeu.eventos.entity.CarreraEntity;
 import pe.edu.upeu.eventos.entity.UsuarioEntity;
 import pe.edu.upeu.eventos.mapper.UsuarioMapper;
+import pe.edu.upeu.eventos.repository.CarreraRepository;
 import pe.edu.upeu.eventos.repository.UsuarioRepository;
 import pe.edu.upeu.eventos.service.UsuarioService;
 
@@ -19,6 +21,9 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private CarreraRepository carreraRepository;
 
     @Autowired
     private UsuarioMapper usuarioMapper;
@@ -36,6 +41,16 @@ public class UsuarioServiceImpl implements UsuarioService {
             throw new RuntimeException("El código de estudiante ya está registrado");
         }
 
+        // Buscar la carrera si se proporcionó ID
+        CarreraEntity carrera = null;
+        if (request.getCarreraId() != null) {
+            carrera = carreraRepository.findById(request.getCarreraId())
+                    .orElseThrow(() -> new RuntimeException("Carrera no encontrada con ID: " + request.getCarreraId()));
+            if (!carrera.getActivo()) {
+                throw new RuntimeException("La carrera seleccionada no está activa");
+            }
+        }
+
         UsuarioEntity usuario = UsuarioEntity.builder()
                 .codigo(request.getCodigo())
                 .email(request.getEmail())
@@ -43,7 +58,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .nombre(request.getNombre())
                 .apellido(request.getApellido())
                 .telefono(request.getTelefono())
-                .carrera(request.getCarrera())
+                .carrera(carrera)
                 .ciclo(request.getCiclo())
                 .rol(request.getRol() != null ? request.getRol() : UsuarioEntity.RolEnum.PARTICIPANTE)
                 .activo(true)
@@ -112,8 +127,13 @@ public class UsuarioServiceImpl implements UsuarioService {
         if (usuarioDTO.getTelefono() != null) {
             usuario.setTelefono(usuarioDTO.getTelefono());
         }
-        if (usuarioDTO.getCarrera() != null) {
-            usuario.setCarrera(usuarioDTO.getCarrera());
+        if (usuarioDTO.getCarreraId() != null) {
+            CarreraEntity carrera = carreraRepository.findById(usuarioDTO.getCarreraId())
+                    .orElseThrow(() -> new RuntimeException("Carrera no encontrada con ID: " + usuarioDTO.getCarreraId()));
+            if (!carrera.getActivo()) {
+                throw new RuntimeException("La carrera seleccionada no está activa");
+            }
+            usuario.setCarrera(carrera);
         }
         if (usuarioDTO.getCiclo() != null) {
             usuario.setCiclo(usuarioDTO.getCiclo());
